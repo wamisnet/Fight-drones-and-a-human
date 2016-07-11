@@ -1,97 +1,73 @@
 #include"Drone_IR.h"
+#include <Nefry.h>
+//データをインターネットに送信します
+#include <Nefry_Milkcocoa.h>
+Nefry_Milkcocoa *milkcocoa;
+char *datastore;
 
-#define THRESHOLD 40
-#define IR 600 //500 is IR
-#define AOE 300 //200 is ally. 300 is enemy.
-#define DAMAGE 5 //1 is MIN. 9 is MAX.
-#define IRMAX 1000
+//Nefry pin connection
+//D0   :D1:D2:D3   :D4  :D5
+//IRout:  :  :motor:IRin:
 
-int data[] = {IR, IRMAX - IR, AOE, IRMAX - AOE, DAMAGE * 100 + 30, 100, 200, 300, 400, 500, 600, 700, 800, 900};
-int damage_count;
-int HP = 2000;
+//Nefry LED State
+//Green :何の処理もしていない(0,255,0)
+//Red   :Err(255,0,0)
+//Blue系:処理中 ---+---オレンジ（255,0,255）:赤外線送信処理中
+//                 +---黄緑(0,255,255)　　　:赤外線受信処理中
+
+int HP, MODE; //体力
+int userdata[2];
+void hpControl(int id, int damage);
 
 void setup() {
-  Drone.setup(11, 13, 1);
-  Drone.motor_setup(3);
-  Drone.led_setup(5);
-  Serial.begin(115200);
-  pinMode(2,INPUT_PULLUP);
+  Drone.setup(D4, D0);
+  milkcocoa->print();//Setup ModuleにAPPIDの表示をする
+  milkcocoa = Nefry_Milkcocoa::begin();
+  datastore = Nefry.getConfStr(3);
+  for (int i = 0; i < 2; i++)
+    userdata[i] = Nefry.getConfValue(i);
+  MODE = Nefry.getConfValue(2);
+  Drone.setHP(Nefry.getConfValue(3));
+  Drone.webPrint();
+  Drone.motor_setup(D3);
+  Drone.motorTime(2000);//起動完了したら振動する
 }
 
-//int data[] = {800, 160, 100, 40, 50, 60, 70, 80, 90, 100, 100, 100, 100, 100, 100};
 void loop() {
-  irget();
- // irsend();
-  delay(100);
- //Drone.motor_time(400);
-  //Drone.led_color(random(250), random(250), 1);
-}
-void irget() {
-  unsigned  long data2[255] = {0};
-  int l;
-  damage_count = 0;
-  Serial.print(l = Drone.IR_get(data2));
-  //Serial.println("個のデータがあります。");
-  for (int i = 0; i < l; i++) {
-    Serial.print(i);
-    Serial.print(":");
-    Serial.println(data2[i]);
-  }
-
-  int d = int(data2[4] / 100);
-  if (data2[0] >= 600 - THRESHOLD && data2[0] <= 600 + THRESHOLD && data[1] >= 400 - THRESHOLD && data[1] <= 400 + THRESHOLD) {
-    for (int i = 1; i <= d; i++) {
-      if (data2[i + 4] >= i * 100 - THRESHOLD && data2[i + 4] <= i * 100 + THRESHOLD) {
-        damage_count++;
-      }
+  if (MODE == 1) {
+    //赤外線送信モード
+    if (Nefry.push_SW()) {
+      Nefry.setLed(255, 0, 255);
+      Drone.IRSend(userdata);
+      Nefry.setLed(0, 255, 0);
     }
-    if (damage_count == d) {
-      Serial.print("Got shot " );
-      Drone.motor_time(400);
-      if (data2[2] >= AOE - THRESHOLD && data2[2] <= AOE + THRESHOLD && data[3] >= 1000 - AOE - THRESHOLD && data[3] <= 1000 - AOE + THRESHOLD) {
-        Serial.print("by ally. ");
-      } else {
-        Serial.print("by enemy. ");
-      }
-      /* ここから下の部分は、本当は上のelseのところに入れる。今はテストなので自分の赤外線を自分で食らうようにしてる。*/
-      Serial.print("Damage ");
-      Serial.println(d * 100);
-      digitalWrite(5, HIGH);
-      delay(10);
-      digitalWrite(5, LOW);
-
-      current_status(d * 100);
-    }
-  }
-}
-void irsend() {
-  if(!digitalRead(2) == 1){
-  Drone.led_color(random(250), random(250), 1);
-  
-  Drone.IR_send(data, sizeof(data) / sizeof(int));
-  delay(100);
-  }
-}
-
-void current_status(int damage) {
-  HP -= damage;
-  if (HP > 0) {
-    Serial.print("HP:");
-    Serial.println(HP);
-    delay(5000);
   } else {
-    Serial.println("GAME OVER!!");
-    for (int i = 0 ; i < 10; i ++) {
-      digitalWrite(5, HIGH);
-      delay(100);
-      digitalWrite(5, LOW);
-      delay(100);
+    //赤外線受信モード
+    if (Drone.IRGet()) {
+      Nefry.print(Drone.getID());
+      Nefry.print(" : ");
+      Nefry.println(Drone.getDamage());
+      hpControl(Drone.getID(), Drone.getDamage());
     }
-    digitalWrite(5, HIGH);
-    delay(5000);
-
-    HP = 2000;
-    digitalWrite(5, LOW);
   }
+  Nefry.ndelay(10);
 }
-
+void hpControl(int id, int damage) {
+  Nefry.setLed(0, 0, 255);
+  Drone.motorTime(1000);
+  DataElement elem = DataElement();
+  Drone.hitHP(damage);
+  elem.setValue("ID", Drone.getID());
+  elem.setValue("HP", Drone.getHP());
+  if ( milkcocoa->loop(10000)) {
+    Nefry.println( "Milkcocoa Connect OK" );
+    milkcocoa->push(datastore, &elem);
+  } else {
+    Nefry.println("Milkcocoa Connect NG" );
+    Nefry.setLed(255, 0, 0);
+    Nefry.ndelay(1000);
+    return;
+  }
+  Nefry.ndelay(1000);
+  Nefry.setLed(0, 255, 0);
+}
