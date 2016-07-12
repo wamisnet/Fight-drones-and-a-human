@@ -1,5 +1,5 @@
 #include"Drone_IR.h"
-int ir_in, ir_out, motorp, led,_HP;
+int ir_in, ir_out, motorp, led, _HP;
 
 //1秒は1000000マイクロ秒
 //      157200
@@ -17,24 +17,25 @@ int ir_in, ir_out, motorp, led,_HP;
 void Drone_IR::IRSend(int irSend[2]) {
   int data[100];
   int array = 0;
-  for (int y = 0; y < 3; y++) {
+  for (int y = 0; y < 1; y++) {
     //startbit
     for (int i = 0; i < 4; i++) {
-      data[array + i * 2] = 1000 * (i % 2);
+      data[array + i * 2] = 1000 +1000* (i % 2);
       data[array + i * 2 + 1] = 300;
     }
-    array += 8;
+    array += 7;
     //databit
     for (int i = 0; i < 2 ; i++) {
       int paritybit;
       paritybit = 0;
+      byte bits=(byte)irSend[i];
       for (int j = 0; j < 7; j++) {
-        data[array + 7 - j] = irSend[i] & 0x01; //一ビット毎にデータをコピーする
-        irSend[i] >> 1;
-        if (data[array + 7 - j] == 1) paritybit++;
+        data[array + 6 - j] = 1000+1000*(bits & 0x01); //一ビット毎にデータをコピーする
+        bits >>= 1;
+        if (data[array + 6 - j] == 1) paritybit++;
       }
       array += 8;
-      data[array - 1] = paritybit % 2;
+      data[array - 1] = 1000+1000*(paritybit % 2);
     }
     //Stopbit
     for (int i = 0; i < 2; i++) {
@@ -43,6 +44,9 @@ void Drone_IR::IRSend(int irSend[2]) {
     }
     array += 4;
     data[array++] = 4000; //次の通信との間隔を取る
+  }
+  for(int i=0;i<array;i++){
+    Serial.println(data[i]);Serial.print(":");
   }
   Drone.IR_signal(data, array);
   Nefry.ndelay(500);
@@ -60,25 +64,25 @@ void Drone_IR::IR_signal(int *data, int dataSize) {
     } while (long(us + len - micros()) > 0); // 送信時間に達するまでループ
   }
 }
-void Drone_IR::setup(int in, int out,bool in_order,bool out_order) { //inを赤外線入力（受信機）、outを赤外線出力（LED）とする
+void Drone_IR::setup(int in, int out, bool in_order, bool out_order) { //inを赤外線入力（受信機）、outを赤外線出力（LED）とする
   //orderに0の時順にプラス
   //int i = 0;
- pinMode(out, OUTPUT);
- /*
-  i++;
-  if (out_order != 0)i -= 2;
-  pinMode(out + i, OUTPUT);
-  digitalWrite(out + i, LOW);*/
+  pinMode(out, OUTPUT);
+  /*
+    i++;
+    if (out_order != 0)i -= 2;
+    pinMode(out + i, OUTPUT);
+    digitalWrite(out + i, LOW);*/
   pinMode(in, INPUT);
-/*  i=0;
-  i++;
-  if (in_order != 0)i -= 2;
-  pinMode(in +i, OUTPUT);
-  digitalWrite(in +i, LOW);
-  i++;
-  if (in_order != 0)i -= 2;
-  pinMode(in + i, OUTPUT);
-  digitalWrite(in + i, HIGH);*/
+  /*  i=0;
+    i++;
+    if (in_order != 0)i -= 2;
+    pinMode(in +i, OUTPUT);
+    digitalWrite(in +i, LOW);
+    i++;
+    if (in_order != 0)i -= 2;
+    pinMode(in + i, OUTPUT);
+    digitalWrite(in + i, HIGH);*/
   ir_in = in;
   ir_out = out;
 }
@@ -87,8 +91,8 @@ void Drone_IR::motor_setup(int pin) {
   motorp = pin;
 }
 void Drone_IR::led_setup(int pin) {
-  for (int i = 0; i < 4;i++)
-  pinMode(pin+i, OUTPUT);
+  for (int i = 0; i < 4; i++)
+    pinMode(pin + i, OUTPUT);
   digitalWrite(pin + 3, LOW);
   led = pin;
 }
@@ -97,28 +101,28 @@ void Drone_IR::motorTime(int time) {
   delay(time);
   digitalWrite(motorp, LOW);
 }
-void Drone_IR::led_color(char green,char blue,bool red) {
+void Drone_IR::led_color(char green, char blue, bool red) {
   analogWrite(led, green);
-  analogWrite(led+1, blue);
-  digitalWrite(led+3,red);
+  analogWrite(led + 1, blue);
+  digitalWrite(led + 3, red);
 }
 unsigned long now = micros();
 unsigned long lastStateChangedMicros = micros();
-int state = HIGH_STATE,iID,idamage;
-int Drone_IR::getID(){
+int state = HIGH_STATE, iID, idamage;
+int Drone_IR::getID() {
   return iID;
 }
-int Drone_IR::getDamage(){
+int Drone_IR::getDamage() {
   return idamage;
 }
 
-void Drone_IR::setHP(int hp){
-  _HP-=hp;
+void Drone_IR::setHP(int hp) {
+  _HP -= hp;
 }
-void Drone_IR::hitHP(int damage){
-  _HP-=damage;
+void Drone_IR::hitHP(int damage) {
+  _HP -= damage;
 }
-int Drone_IR::getHP(){
+int Drone_IR::getHP() {
   return _HP;
 }
 void Drone_IR::webPrint() {
@@ -126,9 +130,11 @@ void Drone_IR::webPrint() {
   Nefry.setConfHtml("Damage", 11);
   Nefry.setConfHtml("Mode", 12);
   Nefry.setConfHtml("HP", 13);
+  for (int i = 10; i < 14; i++)
+    Nefry.setConfHtmlPrint(1, i);
 }
 bool Drone_IR::IRGet() {
- int array[255] = {0};
+  int array[500] = {0};
   int l;
   Serial.print(l = Drone.IR_get(array));
   for (int i = 0; i < l; i++) {
@@ -142,9 +148,9 @@ bool Drone_IR::IRGet() {
     sp = startbit(1000, array, sp);
     if (sp != -1) {
       sp += 7;
-      Serial.println(iID=databit(array, sp));
+      Serial.println(iID = databit(array, sp));
       sp += 8;
-      Serial.println(idamage=databit(array, sp));
+      Serial.println(idamage = databit(array, sp));
       sp += 8;
       if (stopbit(array, sp))return true;
     } else {
@@ -152,15 +158,15 @@ bool Drone_IR::IRGet() {
       return false;
     }
     sp++;
-  } while (l- DATALEN >= sp);
+  } while (l - DATALEN >= sp);
   return false;
 }
-int Drone_IR::IR_get(int IRbit[255]) {
+int Drone_IR::IR_get(int IRbit[500]) {
   unsigned long ir;
   int i = 0;
   while ((ir = IR_get_long()) != 0) {
     if (i++ != 0) {
-      IRbit[i - 2] =(int) ir;
+      IRbit[i - 2] = (int) ir;
     }
     ESP.wdtFeed();
   }
@@ -185,7 +191,7 @@ unsigned long Drone_IR::IR_get_long() {
   lastStateChangedMicros = now;
   if (state == HIGH_STATE) {
     state = LOW_STATE;
-  }else {
+  } else {
     state = HIGH_STATE;
   }
   return ir;
@@ -257,14 +263,14 @@ int Drone_IR::startpoint(int arraylen, int* array, int sp) { //arraylen 配列�
   return -1;
 }
 //stopbit
-bool Drone_IR::stopbit(int *array,int sp) {
-  const int rgArray[] = {3000, 500,3000,500};
+bool Drone_IR::stopbit(int *array, int sp) {
+  const int rgArray[] = {3000, 500, 3000, 500};
   int i;
   for (i = 0; i < 4; i++) {
-    if (!range(1000, rgArray[i], array[sp +i]))break;
+    if (!range(1000, rgArray[i], array[sp + i]))break;
   }
   if (i >= 4) {
-     Serial.println("StopBitOk");
+    Serial.println("StopBitOk");
     return true;
   }
   else return false;
