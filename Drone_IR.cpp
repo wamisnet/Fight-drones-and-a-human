@@ -118,7 +118,7 @@ int Drone_IR::getDamage() {
 }
 
 void Drone_IR::setHP(int hp) {
-  _HP -= hp;
+  _HP = hp;
 }
 void Drone_IR::hitHP(int damage) {
   _HP -= damage;
