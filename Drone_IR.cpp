@@ -17,13 +17,13 @@ int ir_in, ir_out, motorp, led, _HP;
 void Drone_IR::IRSend(int irSend[2]) {
   int data[100];
   int array = 0;
-  for (int y = 0; y < 1; y++) {
+  for (int y = 0; y < 3; y++) {
     //startbit
     for (int i = 0; i < 4; i++) {
       data[array + i * 2] = 1000 +1000* (i % 2);
       data[array + i * 2 + 1] = 300;
     }
-    array += 7;
+    array += 8;
     //databit
     for (int i = 0; i < 2 ; i++) {
       int paritybit;
@@ -46,10 +46,11 @@ void Drone_IR::IRSend(int irSend[2]) {
     data[array++] = 4000; //次の通信との間隔を取る
   }
   for(int i=0;i<array;i++){
-    Serial.println(data[i]);Serial.print(":");
+    Serial.print(data[i]);Serial.print(":");
   }
   Drone.IR_signal(data, array);
   Nefry.ndelay(500);
+  Serial.println();
 }
 
 void Drone_IR::IR_signal(int *data, int dataSize) {
@@ -137,6 +138,7 @@ bool Drone_IR::IRGet() {
   int array[500] = {0};
   int l;
   Serial.print(l = Drone.IR_get(array));
+  if(l==0)return false;
   for (int i = 0; i < l; i++) {
     Serial.print(i);
     Serial.print(":");
