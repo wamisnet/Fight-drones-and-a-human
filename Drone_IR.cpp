@@ -20,7 +20,7 @@ void Drone_IR::IRSend(int irSend[2]) {
   for (int y = 0; y < 3; y++) {
     //startbit
     for (int i = 0; i < 4; i++) {
-      data[array + i * 2] = 1000 +1000* (i % 2);
+      data[array + i * 2] = 1000 + 1000 * (i % 2);
       data[array + i * 2 + 1] = 300;
     }
     array += 8;
@@ -28,14 +28,14 @@ void Drone_IR::IRSend(int irSend[2]) {
     for (int i = 0; i < 2 ; i++) {
       int paritybit;
       paritybit = 0;
-      byte bits=(byte)irSend[i];
+      byte bits = (byte)irSend[i];
       for (int j = 0; j < 7; j++) {
-        data[array + 6 - j] = 1000+1000*(bits & 0x01); //一ビット毎にデータをコピーする
+        data[array + 6 - j] = 1000 + 1000 * (bits & 0x01); //一ビット毎にデータをコピーする
         bits >>= 1;
         if (data[array + 6 - j] == 1) paritybit++;
       }
       array += 8;
-      data[array - 1] = 1000+1000*(paritybit % 2);
+      data[array - 1] = 1000 + 1000 * (paritybit % 2);
     }
     //Stopbit
     for (int i = 0; i < 2; i++) {
@@ -45,11 +45,11 @@ void Drone_IR::IRSend(int irSend[2]) {
     array += 4;
     data[array++] = 4000; //次の通信との間隔を取る
   }
-  for(int i=0;i<array;i++){
-    Serial.print(data[i]);Serial.print(":");
+  for (int i = 0; i < array; i++) {
+    Serial.print(data[i]); Serial.print(":");
   }
   Drone.IR_signal(data, array);
-  Nefry.ndelay(500);
+  Nefry.ndelay(100);
   Serial.println();
 }
 
@@ -129,8 +129,10 @@ int Drone_IR::getHP() {
 void Drone_IR::webPrint() {
   Nefry.setConfHtml("ID", 10);
   Nefry.setConfHtml("Damage", 11);
-  Nefry.setConfHtml("Mode", 12);
+  Nefry.setConfHtml("Mode(1:send", 12);
   Nefry.setConfHtml("HP", 13);
+  Nefry.setConfHtml("AutoSend==1",14);
+  Nefry.setConfHtml("SendDelay",15);
   for (int i = 10; i < 14; i++)
     Nefry.setConfHtmlPrint(1, i);
 }
@@ -138,7 +140,7 @@ bool Drone_IR::IRGet() {
   int array[500] = {0};
   int l;
   Serial.print(l = Drone.IR_get(array));
-  if(l==0)return false;
+  if (l == 0)return false;
   for (int i = 0; i < l; i++) {
     Serial.print(i);
     Serial.print(":");
@@ -223,9 +225,13 @@ int Drone_IR::databit(int *dataArray, int sp) {
 
   }
   if (parity % 2 == binary(dataArray[sp + 7])) {
+    Serial.println("DataBitOk");
     return ID;
   }
-  else return -1;
+  else {
+    Serial.println("DataBitErr");
+    return -1;
+  }
 
 }
 bool Drone_IR::range(int _range, int _source, int _data) {//range データの±いくつ許容するか　souce 比較元（正しいデータ）　data 比較されるデータ（受信データ）
@@ -274,8 +280,10 @@ bool Drone_IR::stopbit(int *array, int sp) {
   if (i >= 4) {
     Serial.println("StopBitOk");
     return true;
+  }else {
+    Serial.println("StopBitErr");
+    return false;
   }
-  else return false;
 }
 
 Drone_IR Drone;
