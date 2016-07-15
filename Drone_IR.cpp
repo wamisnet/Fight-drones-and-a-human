@@ -7,7 +7,7 @@ int ir_in, ir_out, motorp, led, _HP;
 
 //同じデータを送信する
 //1000(500-1500)：0　2000(1500-2500)：1 データの間は500
-//start bit : 1000,300,2000,300,1000,300,2000,300　1000と2000を繰り返す間は300 programとして300が4回続くところを検知し、1000，2000の繰り返しだったら次へ進む　データ数8
+//start bit : 1000,300,2000,300,1000,300,2000,300　1000と2000を繰り返す間は300 programとして300が4回続くところを検知し、1000，3000の繰り返しだったら次へ進む　データ数8//送信するデータを2000→3000に変更
 //data bit (id):　7bitはデータ　最後の一ビットはパリティ　　　データ数8
 //data bit (damage):　7bitはデータ　最後の一ビットはパリティ　データ数8
 //stop bit : 3000,500,3000,500 二回同じデータを送信する 　　　データ数4　
@@ -35,7 +35,7 @@ void Drone_IR::IRSend(int irSend[2]) {
         if (data[array + 6 - j] == 1) paritybit++;
       }
       array += 8;
-      data[array - 1] = 1000 + 1000 * (paritybit % 2);
+      data[array - 1] = 1000 + 1000 * (paritybit % 2)*2;
     }
     //Stopbit
     for (int i = 0; i < 2; i++) {
@@ -241,22 +241,21 @@ bool Drone_IR::range(int _range, int _source, int _data) {//range データの±
 }
 
 int Drone_IR::binary(int decimal) {
-  if (range(1000, 1000, decimal))return 0;
-  if (range(1000, 2000, decimal)) {
-    return 1;
+  if (range(1500, 1000, decimal))return 0;
+  if (range(1500, 3000, decimal)) {
     parity++;
+    return 1;
   } else return -1;
 }
 //startbit
 int Drone_IR::startbit(int arraylen, int* array, int sp) {
-  const int rg = 1000;
   int rgArray[] = {1000, 2000}, i;
   if (arraylen - DATALEN  < sp)return -1;
   for (int c = sp; c < arraylen - DATALEN; c++) {
     sp = startpoint(arraylen, array, c);
     if (sp == -1)return -1;
     for (i = 0; i < 4; i++) {
-      if (!range(rg, rgArray[i % 2], array[sp - 1 + i * 2]))break;
+      if (!range(1500, rgArray[i % 2], array[sp - 1 + i * 2]))break;
     }
     if (i >= 4) return sp;
   }
@@ -265,7 +264,7 @@ int Drone_IR::startpoint(int arraylen, int* array, int sp) { //arraylen 配列�
   for (int i = sp; i < arraylen - DATALEN; i++) {
     int j;
     for (j = 0; j < 4; j++) {
-      if (!range(300, 300, array[i + j * 2]))break; //データが正しくないとき
+      if (!range(550, 300, array[i + j * 2]))break; //データが正しくないとき
     }
     if (j >= 4)return i;
   }
@@ -276,7 +275,7 @@ bool Drone_IR::stopbit(int *array, int sp) {
   const int rgArray[] = {3000, 500, 3000, 500};
   int i;
   for (i = 0; i < 4; i++) {
-    if (!range(1000, rgArray[i], array[sp + i]))break;
+    if (!range(2000, rgArray[i], array[sp + i]))break;
   }
   if (i >= 4) {
     Serial.println("StopBitOk");
