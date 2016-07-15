@@ -172,7 +172,6 @@ int Drone_IR::IR_get(int IRbit[500]) {
     if (i++ != 0) {
       IRbit[i - 2] = (int) ir;
     }
-    ESP.wdtFeed();
   }
   if (i == 0)return false;
   else return i - 1;
