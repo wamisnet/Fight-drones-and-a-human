@@ -30,7 +30,7 @@ void Drone_IR::IRSend(int irSend[2]) {
       paritybit = 0;
       byte bits = (byte)irSend[i];
       for (int j = 0; j < 7; j++) {
-        data[array + 6 - j] = 1000 + 1000 * (bits & 0x01); //一ビット毎にデータをコピーする
+        data[array + 6 - j] = 1000 + 1000 * (bits & 0x01)*2; //一ビット毎にデータをコピーする
         bits >>= 1;
         if (data[array + 6 - j] == 1) paritybit++;
       }
