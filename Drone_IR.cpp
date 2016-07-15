@@ -5,6 +5,9 @@ int ir_in, ir_out, motorp, led, _HP;
 //      157200
 //データは3回繰り返す
 
+//それ以上の送信は送信機や受信機のクラッシュを引き起こすため
+//今回はここまでとする。
+
 //同じデータを送信する
 //1000(500-1500)：0　2000(1500-2500)：1 データの間は500
 //start bit : 1000,300,2000,300,1000,300,2000,300　1000と2000を繰り返す間は300 programとして300が4回続くところを検知し、1000，3000の繰り返しだったら次へ進む　データ数8//送信するデータを2000→3000に変更
@@ -32,7 +35,7 @@ void Drone_IR::IRSend(int irSend[2]) {
       for (int j = 0; j < 7; j++) {
         data[array + 6 - j] = 1000 + 1000 * (bits & 0x01)*2; //一ビット毎にデータをコピーする
         bits >>= 1;
-        if (data[array + 6 - j] == 1) paritybit++;
+        if (data[array + 6 - j] == 3000) paritybit++;
       }
       array += 8;
       data[array - 1] = 1000 + 1000 * (paritybit % 2)*2;
@@ -48,6 +51,7 @@ void Drone_IR::IRSend(int irSend[2]) {
   for (int i = 0; i < array; i++) {
     Serial.print(data[i]); Serial.print(":");
   }
+  
   Drone.IR_signal(data, array);
   Nefry.ndelay(100);
   Serial.println();
@@ -152,13 +156,24 @@ bool Drone_IR::IRGet() {
   sp=0;
   do {
     sp = startbit(1000, array, sp);
+    //Serial.print("startSP:");Serial.println(sp);
     if (sp != -1) {
       sp += 7;
+     // Serial.print("SP:");Serial.println(sp);
       Serial.println(iID = databit(array, sp));
+      if(iID==-1){
+        sp-=6;
+        continue;
+      }
       sp += 8;
+     // Serial.print("damageSP:");Serial.println(sp);
       Serial.println(idamage = databit(array, sp));
+         if(idamage==-1){
+        sp-=14;
+        continue;
+      }
       sp += 8;
-      Serial.print("SP:");Serial.println(sp-DATALEN+4);
+     // Serial.print("TopSP:");Serial.println(sp-DATALEN+4);
       if (stopbit(array, sp))return true;
     } else {
       Serial.println("err");
@@ -217,13 +232,14 @@ int  Drone_IR::waitHigh() {
 
 //databit
 
-int parity = 0;
+
 int Drone_IR::databit(int *dataArray, int sp) {
-
-  int ID = 0;
+int parity= 0, ID = 0;
   for (int i = 6, j = 1; i >= 0; i--, j *= 2) {
-    ID += j * binary(dataArray[sp + i]);
-
+    int now=binary(dataArray[sp + i]);
+    if(now==-1)return -1;
+    if(now==1)parity++;
+    ID += j * now;
   }
   if (parity % 2 == binary(dataArray[sp + 7])) {
     Serial.println("DataBitOk");
@@ -242,10 +258,8 @@ bool Drone_IR::range(int _range, int _source, int _data) {//range データの±
 
 int Drone_IR::binary(int decimal) {
   if (range(1500, 1000, decimal))return 0;
-  if (range(1500, 3000, decimal)) {
-    parity++;
-    return 1;
-  } else return -1;
+  if (range(1500, 3000, decimal))return 1;
+  else return -1;
 }
 //startbit
 int Drone_IR::startbit(int arraylen, int* array, int sp) {
@@ -264,7 +278,7 @@ int Drone_IR::startpoint(int arraylen, int* array, int sp) { //arraylen 配列�
   for (int i = sp; i < arraylen - DATALEN; i++) {
     int j;
     for (j = 0; j < 4; j++) {
-      if (!range(550, 300, array[i + j * 2]))break; //データが正しくないとき
+      if (!range(300, 300, array[i + j * 2]))break; //データが正しくないとき
     }
     if (j >= 4)return i;
   }

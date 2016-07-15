@@ -37,7 +37,7 @@ void setup() {
 }
 
 void loop() {
-  Nefry.setLed(0,255,0);
+  Nefry.setLed(0, 255, 0);
   if (MODE == 1) {
     //赤外線送信モード
     if (Nefry.push_SW() || autosend == 1) {
@@ -75,7 +75,7 @@ void hpControl(int id, int damage) {
     Nefry.println("Milkcocoa Connect NG" );
     Nefry.setLed(255, 0, 0);
     Nefry.ndelay(1000);
-    
+
     return;
   }
   if (Drone.getHP() <= 0) { //体力がなくなったとき
