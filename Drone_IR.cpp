@@ -139,7 +139,8 @@ void Drone_IR::webPrint() {
 bool Drone_IR::IRGet() {
   int array[500] = {0};
   int l;
-  Serial.print(l = Drone.IR_get(array));
+  Serial.println(l = Drone.IR_get(array));
+  Nefry.ndelay(10);
   if (l == 0)return false;
   for (int i = 0; i < l; i++) {
     Serial.print(i);
@@ -148,6 +149,7 @@ bool Drone_IR::IRGet() {
   }
 
   int sp;
+  sp=0;
   do {
     sp = startbit(1000, array, sp);
     if (sp != -1) {
@@ -156,6 +158,7 @@ bool Drone_IR::IRGet() {
       sp += 8;
       Serial.println(idamage = databit(array, sp));
       sp += 8;
+      Serial.print("SP:");Serial.println(sp-DATALEN+4);
       if (stopbit(array, sp))return true;
     } else {
       Serial.println("err");
@@ -183,7 +186,6 @@ unsigned long Drone_IR::IR_get_long() {
   } else {
     int ret = waitHigh();
     if (ret == 1) {
-      Serial.print("\n");
       return 0;
     }
   }
