@@ -1,5 +1,4 @@
 #include"Drone_IR.h"
-int ir_in, ir_out, motorp, led, _HP;
 
 //1秒は1000000マイクロ秒
 //      157200
@@ -17,8 +16,38 @@ int ir_in, ir_out, motorp, led, _HP;
 //総データ数　28
 //次のデータまで5000開ける
 
-void Drone_IR::IRSend(int irSend[2]) {
-  int data[100];
+void Drone_IR::setup(int _ID, int _hp, int _irIn, int _irOut) { //inを赤外線入力（受信機）、outを赤外線出力（LED）とする
+	pinMode(_irOut, OUTPUT);
+	pinMode(_irIn, INPUT);
+	ir_in = _irIn;
+	ir_out = _irOut;
+	hp = _hp;
+	id = _ID;
+}
+//HP管理
+void Drone_IR::addHP(int _hp) {
+	hp += _hp;
+}
+void Drone_IR::hitHP(int damage) {
+	hp -= damage;
+}
+int Drone_IR::getHP() {
+	return hp;
+}
+
+//ダメージ管理
+int Drone_IR::getDamageID(){
+	return damageId;
+}
+int Drone_IR::getDamageHP(){
+	return idamage;
+}
+
+//送信部
+void Drone_IR::IRSend(int _damage) {
+  int data[100], irSend[2];
+  irSend[0] = id;
+  irSend[1] = _damage;
   int array = 0;
   for (int y = 0; y < 3; y++) {
     //startbit
@@ -52,11 +81,10 @@ void Drone_IR::IRSend(int irSend[2]) {
     Serial.print(data[i]); Serial.print(":");
   }
   
-  Drone.IR_signal(data, array);
+  IR_signal(data, array);
   delay(100);
   Serial.println();
 }
-
 void Drone_IR::IR_signal(int *data, int dataSize) {
   for (int cnt = 0; cnt <  dataSize; cnt++) {
     unsigned long len = data[cnt] * 10; // dataは10us単位でON/OFF時間を記録している
@@ -69,72 +97,15 @@ void Drone_IR::IR_signal(int *data, int dataSize) {
     } while (long(us + len - micros()) > 0); // 送信時間に達するまでループ
   }
 }
-void Drone_IR::setup(int in, int out, bool in_order, bool out_order) { //inを赤外線入力（受信機）、outを赤外線出力（LED）とする
-  //orderに0の時順にプラス
-  //int i = 0;
-  pinMode(out, OUTPUT);
-  /*
-    i++;
-    if (out_order != 0)i -= 2;
-    pinMode(out + i, OUTPUT);
-    digitalWrite(out + i, LOW);*/
-  pinMode(in, INPUT);
-  /*  i=0;
-    i++;
-    if (in_order != 0)i -= 2;
-    pinMode(in +i, OUTPUT);
-    digitalWrite(in +i, LOW);
-    i++;
-    if (in_order != 0)i -= 2;
-    pinMode(in + i, OUTPUT);
-    digitalWrite(in + i, HIGH);*/
-  ir_in = in;
-  ir_out = out;
-}
-void Drone_IR::motor_setup(int pin) {
-  pinMode(pin, OUTPUT);
-  motorp = pin;
-}
-void Drone_IR::led_setup(int pin) {
-  for (int i = 0; i < 4; i++)
-    pinMode(pin + i, OUTPUT);
-  digitalWrite(pin + 3, LOW);
-  led = pin;
-}
-void Drone_IR::motorTime(int time) {
-  digitalWrite(motorp, HIGH);
-  delay(time);
-  digitalWrite(motorp, LOW);
-}
-void Drone_IR::led_color(char green, char blue, bool red) {
-  analogWrite(led, green);
-  analogWrite(led + 1, blue);
-  digitalWrite(led + 3, red);
-}
+//送信部ここまで
+
+//受信部
 unsigned long now = micros();
 unsigned long lastStateChangedMicros = micros();
-int state = HIGH_STATE, iID, idamage;
-int Drone_IR::getID() {
-  return iID;
-}
-int Drone_IR::getDamage() {
-  return idamage;
-}
-
-void Drone_IR::setHP(int hp) {
-  _HP = hp;
-}
-void Drone_IR::hitHP(int damage) {
-  _HP -= damage;
-}
-int Drone_IR::getHP() {
-  return _HP;
-}
-
 bool Drone_IR::IRGet() {
   int array[500] = {0};
   int l;
-  Serial.println(l = Drone.IR_get(array));
+  Serial.println(l = DroneIR.IRPacket(array));
   delay(10);
   if (l == 0)return false;
   for (int i = 0; i < l; i++) {
@@ -148,24 +119,27 @@ bool Drone_IR::IRGet() {
   do {
     sp = startbit(1000, array, sp);
     //Serial.print("startSP:");Serial.println(sp);
-    if (sp != -1) {
-      sp += 7;
-     // Serial.print("SP:");Serial.println(sp);
-      Serial.println(iID = databit(array, sp));
-      if(iID==-1){
-        sp-=6;
-        continue;
-      }
-      sp += 8;
-     // Serial.print("damageSP:");Serial.println(sp);
-      Serial.println(idamage = databit(array, sp));
-         if(idamage==-1){
-        sp-=14;
-        continue;
-      }
-      sp += 8;
-     // Serial.print("TopSP:");Serial.println(sp-DATALEN+4);
-      if (stopbit(array, sp))return true;
+	if (sp != -1) {
+		sp += 7;
+		// Serial.print("SP:");Serial.println(sp);
+		Serial.println(damageId = databit(array, sp));
+		if (damageId == -1) {
+			sp -= 6;
+			continue;
+		}
+		sp += 8;
+		// Serial.print("damageSP:");Serial.println(sp);
+		Serial.println(idamage = databit(array, sp));
+		if (idamage == -1) {
+			sp -= 14;
+			continue;
+		}
+		sp += 8;
+		// Serial.print("TopSP:");Serial.println(sp-DATALEN+4);
+		if (stopbit(array, sp)) {
+			hitHP(idamage);
+			return true;
+		}
     } else {
       Serial.println("err");
       return false;
@@ -174,10 +148,10 @@ bool Drone_IR::IRGet() {
   } while (l - DATALEN >= sp);
   return false;
 }
-int Drone_IR::IR_get(int IRbit[500]) {
+int Drone_IR::IRPacket(int IRbit[500]) {
   unsigned long ir;
   int i = 0;
-  while ((ir = IR_get_long()) != 0) {
+  while ((ir = IRRaw()) != 0) {
     if (i++ != 0) {
       IRbit[i - 2] = (int) ir;
     }
@@ -185,7 +159,7 @@ int Drone_IR::IR_get(int IRbit[500]) {
   if (i == 0)return false;
   else return i - 1;
 }
-unsigned long Drone_IR::IR_get_long() {
+unsigned long Drone_IR::IRRaw() {
   unsigned long ir;
   if (state == LOW_STATE) {
     waitLow();
@@ -210,7 +184,6 @@ unsigned long Drone_IR::IR_get_long() {
 void Drone_IR::waitLow() {
   while (digitalRead(ir_in) == LOW);
 }
-
 int  Drone_IR::waitHigh() {
   unsigned long start = micros();
   while (digitalRead(ir_in) == HIGH) {
@@ -219,38 +192,6 @@ int  Drone_IR::waitHigh() {
     }
   }
   return 0;
-}
-
-//databit
-
-
-int Drone_IR::databit(int *dataArray, int sp) {
-int parity= 0, ID = 0;
-  for (int i = 6, j = 1; i >= 0; i--, j *= 2) {
-    int now=binary(dataArray[sp + i]);
-    if(now==-1)return -1;
-    if(now==1)parity++;
-    ID += j * now;
-  }
-  if (parity % 2 == binary(dataArray[sp + 7])) {
-    Serial.println("DataBitOk");
-    return ID;
-  }
-  else {
-    Serial.println("DataBitErr");
-    return -1;
-  }
-
-}
-bool Drone_IR::range(int _range, int _source, int _data) {//range データの±いくつ許容するか　souce 比較元（正しいデータ）　data 比較されるデータ（受信データ）
-  if (_data >= ( _source - _range / 2) && _data <= (_source + _range / 2))return true;
-  else return false;
-}
-
-int Drone_IR::binary(int decimal) {
-  if (range(1500, 1000, decimal))return 0;
-  if (range(1500, 3000, decimal))return 1;
-  else return -1;
 }
 //startbit
 int Drone_IR::startbit(int arraylen, int* array, int sp) {
@@ -275,6 +216,25 @@ int Drone_IR::startpoint(int arraylen, int* array, int sp) { //arraylen 配列�
   }
   return -1;
 }
+//databit
+int Drone_IR::databit(int *dataArray, int sp) {
+	int parity = 0, ID = 0;
+	for (int i = 6, j = 1; i >= 0; i--, j *= 2) {
+		int now = binary(dataArray[sp + i]);
+		if (now == -1)return -1;
+		if (now == 1)parity++;
+		ID += j * now;
+	}
+	if (parity % 2 == binary(dataArray[sp + 7])) {
+		Serial.println("DataBitOk");
+		return ID;
+	}
+	else {
+		Serial.println("DataBitErr");
+		return -1;
+	}
+
+}
 //stopbit
 bool Drone_IR::stopbit(int *array, int sp) {
   const int rgArray[] = {3000, 500, 3000, 500};
@@ -290,6 +250,17 @@ bool Drone_IR::stopbit(int *array, int sp) {
     return false;
   }
 }
+//受信用etc
+bool Drone_IR::range(int _range, int _source, int _data) {//range データの±いくつ許容するか　souce 比較元（正しいデータ）　data 比較されるデータ（受信データ）
+	if (_data >= (_source - _range / 2) && _data <= (_source + _range / 2))return true;
+	else return false;
+}
+int Drone_IR::binary(int decimal) {
+	if (range(1500, 1000, decimal))return 0;
+	if (range(1500, 3000, decimal))return 1;
+	else return -1;
+}
+//受信部ここまで
 
-Drone_IR Drone;
+Drone_IR DroneIR;
 

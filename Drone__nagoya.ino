@@ -14,10 +14,11 @@ int HP, MODE, ID, autosend, senddelay; //体力
 int userdata[2];
 void hpControl(int id, int damage);
 
+#define SW 1
 void setup() {
-  Drone.setup(D4, D0);
-  Drone.motor_setup(D3);
-  Drone.motorTime(500);//起動完了したら振動する
+ // DroneIR.setup(D4, D0);
+  //DroneIR.motor_setup(D3);
+  //Drone.motorTime(500);//起動完了したら振動する
 }
 
 void loop() {
@@ -25,36 +26,36 @@ void loop() {
   if (MODE == 1) {
     //赤外線送信モード
     if (digitalRead(SW)|| autosend == 1) {
-      Drone.IRSend(userdata);
+      DroneIR.IRSend(userdata);
     }
   } else {
     //赤外線受信モード
-    if (Drone.IRGet()) {
-      Serial.print(Drone.getID());
+    if (DroneIR.IRGet()) {
+      Serial.print(DroneIR.getDamageID());
       Serial.print(" : ");
-      Serial.println(Drone.getDamage());
-      Serial.ndelay(50);
-      hpControl(Drone.getID(), Drone.getDamage());
+      Serial.println(DroneIR.getDamageHP());
+      delay(50);
+      //hpControl(Drone.getID(), Drone.getDamage());
     }
   }
   delay(10);
 }
 void hpControl(int id, int damage) {
-  Drone.motorTime(500);
-  Drone.hitHP(damage);
+  //Drone.motorTime(500);
+  //Drone.hitHP(damage);
 
   //elem.setValue("ID", ID);
   //elem.setValue("attackerID", Drone.getID());
   //elem.setValue("HP", Drone.getHP());
 
-  if (Drone.getHP() <= 0) { //体力がなくなったとき
+  if (DroneIR.getHP() <= 0) { //体力がなくなったとき
     Serial.println("HP残りなし");
     while (1) {
-      Drone.motorTime(100);
-      Nefry.ndelay(50);
+      //Drone.motorTime(100);
+      delay(50);
     }
   }
   Serial.print("HP:");
-  Serial.println(Drone.getHP());
+  Serial.println(DroneIR.getHP());
   delay(1000);
 }
