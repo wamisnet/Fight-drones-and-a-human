@@ -16,7 +16,7 @@
 //総データ数　28
 //次のデータまで5000開ける
 
-void Drone_IR::setup(int _ID, int _hp, int _irIn, int _irOut) { //inを赤外線入力（受信機）、outを赤外線出力（LED）とする
+void Drone_IR::begin(int _ID, int _hp, int _irIn, int _irOut) { //inを赤外線入力（受信機）、outを赤外線出力（LED）とする
 	pinMode(_irOut, OUTPUT);
 	pinMode(_irIn, INPUT);
 	ir_in = _irIn;

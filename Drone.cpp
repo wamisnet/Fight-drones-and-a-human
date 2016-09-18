@@ -48,14 +48,17 @@ int DroneParts::readSW() {
 }
 
 //leds
-void DroneParts::setBar(int _bar, bool _state) {
+void DroneParts::setBar(int _bar) {
 	for (int i =0; i < _bar; i++) {
-		setLed(i, state);
+		setLed(i, HIGH);
+	}
+	for (int i = _bar; i < 5; i++) {
+		setLed(i, LOW);
 	}
 	storageLed = _bar;
 }
 void DroneParts::setLed(int _led, bool _state) {
-	ditalWrite(led[_led], _state);
+	digitalWrite(led[_led], _state);
 }
 
 //WiFi
@@ -64,7 +67,7 @@ void DroneParts::wifiPrint(String s){
 }
 
 //setup
-void DroneParts::begin(int _motor, int _modeP, int _id[3], int _sw[3], int _led[5]) {
+void DroneParts::begin(int _motor, int _modeP,int* _id, int* _sw, int* _led){ //int _id[3], int _sw[3], int _led[5]) {
 	motor = _motor;
 	modeP = _modeP;
 	id = _id;
@@ -95,14 +98,9 @@ void DroneParts::loop(int _interval){
 			//受信処理
 			delay(1);
 		}
-		setBar(getStorage()++);
+		setBar(getStorage()+1);
 	}
 }
 
-
-
-
-
-
-DroneParts Drone;
+DroneParts DroneIO;
 

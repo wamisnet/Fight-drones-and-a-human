@@ -1,17 +1,18 @@
-#ifndef Drone_IR_h
-#define Drone_IR_h
+#ifndef Drone_h
+#define Drone_h
 #include<Arduino.h>
 #include <SoftwareSerial.h>
-
-const int SW[] = { 6,7,8 };
-const int ID[] = { 2,4,5 };
-const int LED[] = { A0,A1,A2,A3,A4 };
-
+/*
+int SWs[] = { 6,7,8 };
+int IDs[] = { 2,4,5 };
+int LEDs[] = { A0,A1,A2,A3,A4 };
+*/
 class DroneParts {
   public:
-	  void begin(int _motor = 3, int _mode = A5, int _id[3] = ID, int _sw[3] = SW, int _led[5] = LED),
+	  void begin(int _motor, int _mode, int* _id, int* _sw, int* _led),
+	  //int _motor = 3, int _mode = A5, int* _id= IDs, int* _sw = SWs, int* _led= LEDs),
 		  setLed(int _led,bool _state),
-		  setBar(int _bar, bool _state),
+		  setBar(int _bar),
 		  setMotor(int time),
 		  wifiPrint(String s),
 		  setId(),
@@ -23,7 +24,8 @@ class DroneParts {
 	  int motor, modeP,mode, *id, *sw, *led, storageLed,idChar;
 	  int getStorage();
 };
-extern DroneParts Drone;
+extern DroneParts DroneIO;
+
 #endif
 
 

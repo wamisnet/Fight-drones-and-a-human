@@ -1,4 +1,5 @@
 #include"Drone_IR.h"
+#include"Drone.h"
 
 //Nefry pin connection
 //D0   :D1:D2:D3   :D4  :D5
@@ -10,7 +11,7 @@
 //Blue系:処理中 ---+---オレンジ（255,0,255）:赤外線送信処理中
 //                 +---黄緑(0,255,255)　　　:赤外線受信処理中
 
-int HP, MODE, ID, autosend, senddelay; //体力
+int HP, MODE, autosend, senddelay; //体力
 int userdata[2];
 void hpControl(int id, int damage);
 
@@ -25,8 +26,8 @@ void loop() {
   
   if (MODE == 1) {
     //赤外線送信モード
-    if (digitalRead(SW)|| autosend == 1) {
-      DroneIR.IRSend(userdata);
+    if (digitalRead(1)|| autosend == 1) {
+      DroneIR.IRSend(100);
     }
   } else {
     //赤外線受信モード
@@ -51,7 +52,7 @@ void hpControl(int id, int damage) {
   if (DroneIR.getHP() <= 0) { //体力がなくなったとき
     Serial.println("HP残りなし");
     while (1) {
-      //Drone.motorTime(100);
+      DroneIO.setMotor(100);
       delay(50);
     }
   }

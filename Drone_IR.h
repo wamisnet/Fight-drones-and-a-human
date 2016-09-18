@@ -6,7 +6,7 @@
 #define DATALEN 28
 class Drone_IR {
   public:
-	void setup(int _ID, int _hp, int _irIn=12, int _irOut=11),
+	void begin(int _ID, int _hp, int _irIn=12, int _irOut=11),
          addHP(int hp),
          IRSend(int _damage);//赤外線の送信に使う　irSend [0] :userID		irSend [1] :ダメ―ジ
     bool IRGet();//赤外線を受信したいときに使う、赤外線を取得したときにTrue
