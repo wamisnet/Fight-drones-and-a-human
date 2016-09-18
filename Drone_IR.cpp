@@ -53,7 +53,7 @@ void Drone_IR::IRSend(int irSend[2]) {
   }
   
   Drone.IR_signal(data, array);
-  Nefry.ndelay(100);
+  delay(100);
   Serial.println();
 }
 
@@ -130,21 +130,12 @@ void Drone_IR::hitHP(int damage) {
 int Drone_IR::getHP() {
   return _HP;
 }
-void Drone_IR::webPrint() {
-  Nefry.setConfHtml("ID", 10);
-  Nefry.setConfHtml("Damage", 11);
-  Nefry.setConfHtml("Mode(1:send", 12);
-  Nefry.setConfHtml("HP", 13);
-  Nefry.setConfHtml("AutoSend==1",14);
-  Nefry.setConfHtml("SendDelay",15);
-  for (int i = 10; i < 14; i++)
-    Nefry.setConfHtmlPrint(1, i);
-}
+
 bool Drone_IR::IRGet() {
   int array[500] = {0};
   int l;
   Serial.println(l = Drone.IR_get(array));
-  Nefry.ndelay(10);
+  delay(10);
   if (l == 0)return false;
   for (int i = 0; i < l; i++) {
     Serial.print(i);

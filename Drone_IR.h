@@ -1,8 +1,6 @@
 #ifndef Drone_IR_h
 #define Drone_IR_h
 #include<Arduino.h>
-#include<Nefry.h>
-#include<Esp.h>
 #define LOW_STATE 0
 #define HIGH_STATE 1
 #define DATALEN 28
@@ -15,7 +13,6 @@ class Drone_IR {
          led_color(char green, char blue, bool red),
          setHP(int hp),
          hitHP(int damage),
-         webPrint(),
          IRSend(int irSend[2]);//赤外線の送信に使う　
     //irSend [0] :userID
     //irSend [1] :ダメ―ジ
@@ -29,7 +26,7 @@ class Drone_IR {
     void IR_signal(int *, int),
          waitLow();
     int waitHigh(),
-        IR_get(int data[255]),
+        IR_get(int data[500]),
         startpoint(int arraylen, int* array, int sp),
         databit(int *dataArray, int sp),
         startbit(int arraylen, int* array, int sp),
