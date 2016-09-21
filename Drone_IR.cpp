@@ -18,6 +18,7 @@
 
 void Drone_IR::begin(int _ID, int _hp, int _irIn, int _irOut) { //inを赤外線入力（受信機）、outを赤外線出力（LED）とする
 	pinMode(_irOut, OUTPUT);
+  digitalWrite(_irOut,LOW);
 	pinMode(_irIn, INPUT);
 	ir_in = _irIn;
 	ir_out = _irOut;
